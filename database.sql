@@ -2,16 +2,22 @@
 -- Ejecutar este archivo desde phpMyAdmin de AlwaysData.
 -- Si la base de datos ya existe, no es necesario crearla de nuevo.
 
-CREATE TABLE IF NOT EXISTS estudiantes (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    nombre VARCHAR(120) NOT NULL,
-    identificacion VARCHAR(30) NOT NULL,
-    telefono VARCHAR(30) DEFAULT NULL,
-    direccion VARCHAR(180) DEFAULT NULL,
-    fecha_registro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_identificacion (identificacion)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ // Crear la base de datos si no existe
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        $pdo->exec("USE `" . DB_NAME . "`");
+
+        // Crear la tabla alumnos si no existe
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS alumnos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(150) NOT NULL,
+                identificacion VARCHAR(50) NOT NULL,
+                telefono VARCHAR(30) DEFAULT NULL,
+                direccion TEXT DEFAULT NULL,
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_identificacion (identificacion)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
 
 -- 10 estudiantes de ejemplo.
 INSERT INTO estudiantes (nombre, identificacion, telefono, direccion) VALUES
