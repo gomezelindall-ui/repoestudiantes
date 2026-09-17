@@ -3,7 +3,7 @@
 $host= 'mysql-mario99.alwaysdata.net';
 $password = 'luis1009';
 $username = 'mario99';
-$dbname = 'mario99_repoenvios';
+$dbname = 'mario99_alumnos';
 
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
