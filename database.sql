@@ -1,33 +1,20 @@
+<?php
 -- Base de datos: elindall_repoestudiantes
 -- Ejecutar este archivo desde phpMyAdmin de AlwaysData.
 -- Si la base de datos ya existe, no es necesario crearla de nuevo.
+ // Crea la tabla si no existe.
 
- // Crear la base de datos si no existe
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("USE `" . DB_NAME . "`");
-
-        // Crear la tabla alumnos si no existe
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS alumnos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nombre VARCHAR(150) NOT NULL,
-                identificacion VARCHAR(50) NOT NULL,
-                telefono VARCHAR(30) DEFAULT NULL,
-                direccion TEXT DEFAULT NULL,
-                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY uk_identificacion (identificacion)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ");
-
--- 10 estudiantes de ejemplo.
-INSERT INTO estudiantes (nombre, identificacion, telefono, direccion) VALUES
-('Ana María López', '1001001001', '3001234567', 'Calle 10 # 15-20'),
-('Carlos Andrés Pérez', '1001001002', '3012345678', 'Carrera 8 # 22-14'),
-('Laura Valentina Gómez', '1001001003', '3023456789', 'Calle 25 # 7-31'),
-('Juan Sebastián Rodríguez', '1001001004', '3034567890', 'Carrera 12 # 18-45'),
-('Mariana Torres Díaz', '1001001005', '3045678901', 'Calle 33 # 10-16'),
-('Daniel Felipe Martínez', '1001001006', '3056789012', 'Carrera 20 # 9-27'),
-('Sofía Camila Herrera', '1001001007', '3067890123', 'Calle 14 # 30-08'),
-('Mateo Alejandro Castro', '1001001008', '3078901234', 'Carrera 5 # 40-12'),
-('Valentina Rojas Sánchez', '1001001009', '3089012345', 'Calle 41 # 16-23'),
-('Santiago David Moreno', '1001001010', '3090123456', 'Carrera 15 # 28-36');
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS alumnos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(150) NOT NULL,
+            identificacion VARCHAR(50) NOT NULL UNIQUE,
+            telefono VARCHAR(30) NOT NULL,
+            direccion VARCHAR(255) NOT NULL,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+ catch (PDOException $e) {
+    die("Error de conexión o creación de tabla: " . htmlspecialchars($e->getMessage()));
+}
+?>
