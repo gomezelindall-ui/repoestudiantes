@@ -3,7 +3,7 @@ name: 🚀 Tarea de Despliegue Evelin
 on:
    push:
      branches:
-       - main
+       - mario
 
 jobs:
   deploy:
@@ -17,9 +17,9 @@ jobs:
       - name: 📂 Sincronizando archivos via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftp-elindall.alwaysdata.net # Change if using another host
-          username: elindall
-          password: jhosep2020
+          server:  ftp-mario99.alwaysdata.net # Change if using another host
+          username: mario99
+          password: clase1234
           server-dir: www/ # Replace with your correct path
           protocol: ftps
           timeout: 86400000

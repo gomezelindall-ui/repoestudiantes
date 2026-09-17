@@ -1,197 +1,223 @@
 <?php
-require_once "config.php";
+/**
+ * RepoAlumnos - Gestión de Alumnos
+ * Listado principal y formulario de alta/edición
+ */
 
-$mensaje = "";
-$tipo = "success";
+require_once 'config.php';
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $accion = $_POST["accion"] ?? "";
+$pdo = getConnection();
+$mensaje = '';
+$tipoMensaje = '';
+$alumnoEditar = null;
 
-    if ($accion === "crear") {
-        $nombre = trim($_POST["nombre"] ?? "");
-        $identificacion = trim($_POST["identificacion"] ?? "");
-        $telefono = trim($_POST["telefono"] ?? "");
-        $direccion = trim($_POST["direccion"] ?? "");
+// Procesar acciones
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $accion = $_POST['accion'] ?? '';
 
-        if ($nombre === "" || $identificacion === "") {
-            $mensaje = "Nombre e identificación son obligatorios.";
-            $tipo = "error";
+    if ($accion === 'crear' || $accion === 'actualizar') {
+        $nombre = trim($_POST['nombre'] ?? '');
+        $identificacion = trim($_POST['identificacion'] ?? '');
+        $telefono = trim($_POST['telefono'] ?? '');
+        $direccion = trim($_POST['direccion'] ?? '');
+
+        if (empty($nombre) || empty($identificacion)) {
+            $mensaje = 'El nombre y la identificación son obligatorios.';
+            $tipoMensaje = 'error';
         } else {
-            $stmt = $conn->prepare("INSERT INTO estudiantes (nombre, identificacion, telefono, direccion) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $nombre, $identificacion, $telefono, $direccion);
-            if ($stmt->execute()) {
-                $mensaje = "Estudiante registrado correctamente.";
-            } else {
-                $mensaje = $stmt->errno == 1062 ? "La identificación ya está registrada." : "No se pudo registrar el estudiante.";
-                $tipo = "error";
+            try {
+                if ($accion === 'crear') {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO alumnos (nombre, identificacion, telefono, direccion)
+                        VALUES (?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$nombre, $identificacion, $telefono ?: null, $direccion ?: null]);
+                    $mensaje = 'Alumno registrado correctamente.';
+                    $tipoMensaje = 'success';
+                } else {
+                    $id = (int)($_POST['id'] ?? 0);
+                    $stmt = $pdo->prepare("
+                        UPDATE alumnos
+                        SET nombre = ?, identificacion = ?, telefono = ?, direccion = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$nombre, $identificacion, $telefono ?: null, $direccion ?: null, $id]);
+                    $mensaje = 'Alumno actualizado correctamente.';
+                    $tipoMensaje = 'success';
+                }
+            } catch (PDOException $e) {
+                if ($e->getCode() == 23000) {
+                    $mensaje = 'Ya existe un alumno con esa identificación.';
+                } else {
+                    $mensaje = 'Error al guardar: ' . htmlspecialchars($e->getMessage());
+                }
+                $tipoMensaje = 'error';
             }
-            $stmt->close();
-        }
-    }
-
-    if ($accion === "eliminar") {
-        $id = intval($_POST["id"] ?? 0);
-        if ($id > 0) {
-            $stmt = $conn->prepare("DELETE FROM estudiantes WHERE id = ?");
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-            $mensaje = $stmt->affected_rows ? "Estudiante eliminado." : "No se encontró el estudiante.";
-            $tipo = $stmt->affected_rows ? "success" : "error";
-            $stmt->close();
         }
     }
 }
 
-$editar = null;
-if (isset($_GET["editar"])) {
-    $id = intval($_GET["editar"]);
-    $stmt = $conn->prepare("SELECT * FROM estudiantes WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $editar = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-}
-
-if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "actualizar") {
-    $id = intval($_POST["id"] ?? 0);
-    $nombre = trim($_POST["nombre"] ?? "");
-    $identificacion = trim($_POST["identificacion"] ?? "");
-    $telefono = trim($_POST["telefono"] ?? "");
-    $direccion = trim($_POST["direccion"] ?? "");
-
-    if ($id <= 0 || $nombre === "" || $identificacion === "") {
-        $mensaje = "Nombre e identificación son obligatorios.";
-        $tipo = "error";
-    } else {
-        $stmt = $conn->prepare("UPDATE estudiantes SET nombre=?, identificacion=?, telefono=?, direccion=? WHERE id=?");
-        $stmt->bind_param("ssssi", $nombre, $identificacion, $telefono, $direccion, $id);
-        if ($stmt->execute()) {
-            $mensaje = "Estudiante actualizado correctamente.";
-        } else {
-            $mensaje = $stmt->errno == 1062 ? "La identificación ya está registrada." : "No se pudo actualizar el estudiante.";
-            $tipo = "error";
-        }
-        $stmt->close();
-        $editar = null;
+// Eliminar
+if (isset($_GET['eliminar'])) {
+    $id = (int)$_GET['eliminar'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM alumnos WHERE id = ?");
+        $stmt->execute([$id]);
+        $mensaje = 'Alumno eliminado correctamente.';
+        $tipoMensaje = 'success';
+    } catch (PDOException $e) {
+        $mensaje = 'Error al eliminar: ' . htmlspecialchars($e->getMessage());
+        $tipoMensaje = 'error';
     }
 }
 
-$buscar = trim($_GET["buscar"] ?? "");
-if ($buscar !== "") {
-    $like = "%" . $buscar . "%";
-    $stmt = $conn->prepare("SELECT * FROM estudiantes WHERE nombre LIKE ? OR identificacion LIKE ? OR telefono LIKE ? ORDER BY id DESC");
-    $stmt->bind_param("sss", $like, $like, $like);
-    $stmt->execute();
-    $estudiantes = $stmt->get_result();
+// Cargar alumno para editar
+if (isset($_GET['editar'])) {
+    $id = (int)$_GET['editar'];
+    $stmt = $pdo->prepare("SELECT * FROM alumnos WHERE id = ?");
+    $stmt->execute([$id]);
+    $alumnoEditar = $stmt->fetch();
+}
+
+// Listar alumnos
+$busqueda = trim($_GET['q'] ?? '');
+if ($busqueda !== '') {
+    $stmt = $pdo->prepare("
+        SELECT * FROM alumnos
+        WHERE nombre LIKE ? OR identificacion LIKE ? OR telefono LIKE ? OR direccion LIKE ?
+        ORDER BY nombre ASC
+    ");
+    $like = '%' . $busqueda . '%';
+    $stmt->execute([$like, $like, $like, $like]);
 } else {
-    $estudiantes = $conn->query("SELECT * FROM estudiantes ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT * FROM alumnos ORDER BY nombre ASC");
 }
+$alumnos = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda de Estudiantes</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoAlumnos - Gestión de Alumnos</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="hero">
-    <div class="hero-inner">
-        <div>
-            <span class="eyebrow">GESTIÓN ACADÉMICA</span>
-            <h1>Agenda de Estudiantes</h1>
-            <p>Administra de forma sencilla los datos de tus estudiantes.</p>
+    <div class="container">
+        <header>
+            <h1>📚 RepoAlumnos</h1>
+            <p class="subtitle">Sistema de gestión de alumnos</p>
+        </header>
+
+        <?php if ($mensaje): ?>
+            <div class="alert alert-<?= $tipoMensaje ?>">
+                <?= htmlspecialchars($mensaje) ?>
+            </div>
+        <?php endif; ?>
+
+        <div class="grid">
+            <!-- Formulario -->
+            <section class="card form-card">
+                <h2><?= $alumnoEditar ? '✏️ Editar Alumno' : '➕ Nuevo Alumno' ?></h2>
+                <form method="POST" action="index.php">
+                    <input type="hidden" name="accion" value="<?= $alumnoEditar ? 'actualizar' : 'crear' ?>">
+                    <?php if ($alumnoEditar): ?>
+                        <input type="hidden" name="id" value="<?= (int)$alumnoEditar['id'] ?>">
+                    <?php endif; ?>
+
+                    <div class="form-group">
+                        <label for="nombre">Nombre completo *</label>
+                        <input type="text" id="nombre" name="nombre" required
+                               value="<?= htmlspecialchars($alumnoEditar['nombre'] ?? '') ?>"
+                               placeholder="Ej: Juan Pérez">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="identificacion">Identificación *</label>
+                        <input type="text" id="identificacion" name="identificacion" required
+                               value="<?= htmlspecialchars($alumnoEditar['identificacion'] ?? '') ?>"
+                               placeholder="Cédula / DNI / Pasaporte">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" id="telefono" name="telefono"
+                               value="<?= htmlspecialchars($alumnoEditar['telefono'] ?? '') ?>"
+                               placeholder="Ej: 3001234567">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="direccion">Dirección de residencia</label>
+                        <textarea id="direccion" name="direccion" rows="3"
+                                  placeholder="Calle, número, barrio, ciudad..."><?= htmlspecialchars($alumnoEditar['direccion'] ?? '') ?></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <?= $alumnoEditar ? 'Guardar cambios' : 'Registrar alumno' ?>
+                        </button>
+                        <?php if ($alumnoEditar): ?>
+                            <a href="index.php" class="btn btn-secondary">Cancelar</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Listado -->
+            <section class="card list-card">
+                <div class="list-header">
+                    <h2>📋 Listado de Alumnos</h2>
+                    <form method="GET" class="search-form">
+                        <input type="text" name="q" placeholder="Buscar..."
+                               value="<?= htmlspecialchars($busqueda) ?>">
+                        <button type="submit" class="btn btn-sm">Buscar</button>
+                        <?php if ($busqueda !== ''): ?>
+                            <a href="index.php" class="btn btn-sm btn-secondary">Limpiar</a>
+                        <?php endif; ?>
+                    </form>
+                </div>
+
+                <?php if (count($alumnos) === 0): ?>
+                    <p class="empty">No hay alumnos registrados<?= $busqueda ? ' con ese criterio' : '' ?>.</p>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Identificación</th>
+                                    <th>Teléfono</th>
+                                    <th>Dirección</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($alumnos as $a): ?>
+                                    <tr>
+                                        <td data-label="Nombre"><?= htmlspecialchars($a['nombre']) ?></td>
+                                        <td data-label="Identificación"><?= htmlspecialchars($a['identificacion']) ?></td>
+                                        <td data-label="Teléfono"><?= htmlspecialchars($a['telefono'] ?? '—') ?></td>
+                                        <td data-label="Dirección"><?= htmlspecialchars($a['direccion'] ?? '—') ?></td>
+                                        <td data-label="Acciones" class="actions">
+                                            <a href="?editar=<?= (int)$a['id'] ?>" class="btn btn-sm btn-edit" title="Editar">✏️</a>
+                                            <a href="?eliminar=<?= (int)$a['id'] ?>"
+                                               class="btn btn-sm btn-delete"
+                                               title="Eliminar"
+                                               onclick="return confirm('¿Eliminar a <?= htmlspecialchars(addslashes($a['nombre'])) ?>?')">🗑️</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="total"><?= count($alumnos) ?> alumno(s) encontrado(s)</p>
+                <?php endif; ?>
+            </section>
         </div>
-        <div class="hero-icon">🎓</div>
+
+        <footer>
+            <p>RepoAlumnos &copy; <?= date('Y') ?> — Gestión sencilla de alumnos</p>
+        </footer>
     </div>
-</header>
-
-<main class="container">
-<?php if ($mensaje): ?>
-<div class="alert <?= $tipo ?>"><?= htmlspecialchars($mensaje) ?></div>
-<?php endif; ?>
-
-<section class="panel form-panel">
-    <div class="section-title">
-        <div>
-            <span class="mini-label"><?= $editar ? "EDITAR REGISTRO" : "NUEVO REGISTRO" ?></span>
-            <h2><?= $editar ? "Actualizar estudiante" : "Registrar estudiante" ?></h2>
-        </div>
-    </div>
-
-    <form method="POST" class="form-grid">
-        <input type="hidden" name="accion" value="<?= $editar ? "actualizar" : "crear" ?>">
-        <?php if ($editar): ?><input type="hidden" name="id" value="<?= (int)$editar["id"] ?>"><?php endif; ?>
-
-        <label>Nombre completo
-            <input type="text" name="nombre" required maxlength="120" value="<?= htmlspecialchars($editar["nombre"] ?? "") ?>" placeholder="Ej. María González">
-        </label>
-
-        <label>Identificación
-            <input type="text" name="identificacion" required maxlength="30" value="<?= htmlspecialchars($editar["identificacion"] ?? "") ?>" placeholder="Ej. 1234567890">
-        </label>
-
-        <label>Teléfono
-            <input type="text" name="telefono" maxlength="30" value="<?= htmlspecialchars($editar["telefono"] ?? "") ?>" placeholder="Ej. 300 123 4567">
-        </label>
-
-        <label>Dirección
-            <input type="text" name="direccion" maxlength="180" value="<?= htmlspecialchars($editar["direccion"] ?? "") ?>" placeholder="Ej. Calle 10 # 20-30">
-        </label>
-
-        <div class="form-actions">
-            <button class="btn primary" type="submit"><?= $editar ? "Guardar cambios" : "Registrar estudiante" ?></button>
-            <?php if ($editar): ?><a class="btn secondary" href="index.php">Cancelar</a><?php endif; ?>
-        </div>
-    </form>
-</section>
-
-<section class="panel">
-    <div class="list-header">
-        <div>
-            <span class="mini-label">DIRECTORIO</span>
-            <h2>Estudiantes registrados</h2>
-        </div>
-        <form class="search" method="GET">
-            <input type="search" name="buscar" value="<?= htmlspecialchars($buscar) ?>" placeholder="Buscar estudiante...">
-            <button class="btn secondary" type="submit">Buscar</button>
-            <?php if ($buscar !== ""): ?><a class="clear" href="index.php">Limpiar</a><?php endif; ?>
-        </form>
-    </div>
-
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr><th>Nombre</th><th>Identificación</th><th>Teléfono</th><th>Dirección</th><th>Acciones</th></tr>
-            </thead>
-            <tbody>
-            <?php if ($estudiantes && $estudiantes->num_rows > 0): ?>
-                <?php while ($row = $estudiantes->fetch_assoc()): ?>
-                <tr>
-                    <td><strong><?= htmlspecialchars($row["nombre"]) ?></strong></td>
-                    <td><?= htmlspecialchars($row["identificacion"]) ?></td>
-                    <td><?= htmlspecialchars($row["telefono"]) ?></td>
-                    <td><?= htmlspecialchars($row["direccion"]) ?></td>
-                    <td class="actions">
-                        <a class="action edit" href="?editar=<?= (int)$row["id"] ?>">Editar</a>
-                        <form method="POST" onsubmit="return confirm('¿Deseas eliminar este estudiante?');">
-                            <input type="hidden" name="accion" value="eliminar">
-                            <input type="hidden" name="id" value="<?= (int)$row["id"] ?>">
-                            <button class="action delete" type="submit">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <tr><td colspan="5" class="empty">No hay estudiantes para mostrar.</td></tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-</main>
-
-<footer>Agenda de Estudiantes · PHP + MySQL · Preparada para AlwaysData</footer>
 </body>
 </html>

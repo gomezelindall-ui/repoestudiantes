@@ -1,42 +1,54 @@
-# Agenda de Estudiantes
+# RepoAlumnos
 
-Aplicativo web en PHP + MySQL para gestionar una agenda de estudiantes.
+Aplicación PHP + MySQL para gestionar alumnos.
 
-## Campos
+## Características
 
-- Nombre
-- Identificación
-- Teléfono
-- Dirección
-- Fecha de registro (automática)
-
-## Funciones
-
-- Registrar estudiantes.
-- Consultar estudiantes.
-- Buscar por nombre, identificación o teléfono.
-- Editar registros.
-- Eliminar registros.
-- Base de datos con 10 registros iniciales.
-
-## Instalación en AlwaysData
-
-1. Crea o utiliza la base de datos `elindall_repoestudiantes`.
-2. Abre phpMyAdmin desde AlwaysData.
-3. Ejecuta el contenido de `database.sql`.
-4. Sube `config.php`, `index.php` y `style.css` a la carpeta pública de tu sitio.
-5. Abre la dirección de tu sitio en el navegador.
-
-## Conexión
-
-El archivo `config.php` contiene los datos de conexión proporcionados para este proyecto.
-
-## GitHub
-
-Puedes subir los archivos del proyecto a un repositorio de GitHub y después desplegarlos en AlwaysData. No publiques las credenciales de la base de datos en un repositorio público; para un proyecto real, usa variables de entorno o un archivo de configuración fuera del repositorio.
+- Alta, edición y eliminación de alumnos
+- Campos: nombre, identificación, teléfono y dirección de residencia
+- Búsqueda por cualquier campo
+- Creación automática de la base de datos y de la tabla `alumnos` si no existen
+- Interfaz responsive y limpia
 
 ## Requisitos
 
-- PHP 7.4 o superior.
-- MySQL/MariaDB.
-- Extensión `mysqli`.
+- PHP 7.4 o superior (con extensión PDO MySQL)
+- Acceso a la base de datos MySQL indicada
+
+## Credenciales de base de datos (ya configuradas)
+
+| Parámetro | Valor                          |
+|-----------|--------------------------------|
+| Host      | mysql-mario99.alwaysdata.net   |
+| Usuario   | mario99                        |
+| Clave     | luis1009                       |
+| Base de datos | mario99_alumnos            |
+
+## Instalación
+
+1. Sube la carpeta `repoalumnos` a tu servidor web (o colócala en la carpeta pública de tu hosting).
+2. Asegúrate de que PHP tenga habilitada la extensión `pdo_mysql`.
+3. Abre en el navegador la URL correspondiente a `index.php`.
+
+La aplicación creará automáticamente la base de datos y la tabla la primera vez que se ejecute.
+
+## Estructura de archivos
+
+```
+repoalumnos/
+├── config.php    # Conexión y creación de tablas
+├── index.php     # Interfaz principal (CRUD)
+├── style.css     # Estilos
+└── README.md     # Este archivo
+```
+
+## Tabla `alumnos`
+
+| Campo            | Tipo         | Descripción              |
+|------------------|--------------|--------------------------|
+| id               | INT (PK)     | Auto-incremental         |
+| nombre           | VARCHAR(150) | Nombre completo          |
+| identificacion   | VARCHAR(50)  | Único (cédula/DNI/etc.)  |
+| telefono         | VARCHAR(30)  | Teléfono de contacto     |
+| direccion        | TEXT         | Dirección de residencia  |
+| fecha_registro   | TIMESTAMP    | Fecha de alta automática |

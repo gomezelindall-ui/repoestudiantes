@@ -1,9 +1,9 @@
 <?php
 // Configuración de conexión a MySQL (AlwaysData)
-$host = "mysql-elindall.alwaysdata.net";
-$user = "elindall";
-$pass = "jhosep2020";
-$db   = "elindall_repoestudiantes";
+$host= 'mysql-mario99.alwaysdata.net';
+$password = 'luis1009';
+$username = 'mario99';
+$dbname = 'mario99_repoenvios';
 
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
