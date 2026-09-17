@@ -6,7 +6,7 @@
 
 require_once 'config.php';
 
-$pdo = getConnection();
+$pdo = $conn();
 $mensaje = '';
 $tipoMensaje = '';
 $alumnoEditar = null;
